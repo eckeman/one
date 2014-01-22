@@ -43,7 +43,7 @@ BASENAME=$(basename $0 _control.sh)
 CLIENT=$DIR/${BASENAME}.rb
 
 # Collectd client PID
-CLIENT_PID_FILE=/tmp/one-collectd-client.pid
+CLIENT_PID_FILE=$DIR/../../one-collectd-client.pid
 
 # Launch the client
 function start_client() {
