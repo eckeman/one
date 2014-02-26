@@ -143,6 +143,7 @@ int LibVirtDriver::deployment_description_kvm(
     string  passwd          = "";
     string  keymap          = "";
     string  spice_options   = "";
+    string  default_graphics_type = "";
 
     const VectorAttribute * input;
 
@@ -700,57 +701,80 @@ int LibVirtDriver::deployment_description_kvm(
     {
         graphics = dynamic_cast<const VectorAttribute *>(attrs[0]);
 
-        if ( graphics != 0 )
+        type   = graphics->vector_value("TYPE");
+        listen = graphics->vector_value("LISTEN");
+        port   = graphics->vector_value("PORT");
+        passwd = graphics->vector_value("PASSWD");
+        keymap = graphics->vector_value("KEYMAP");
+    }
+
+    get_default("GRAPHICS", "TYPE", default_graphics_type);
+
+    if ( !type.empty() || !default_graphics_type.empty() )
+    {
+
+        if ( type.empty() )
         {
-            type   = graphics->vector_value("TYPE");
-            listen = graphics->vector_value("LISTEN");
-            port   = graphics->vector_value("PORT");
-            passwd = graphics->vector_value("PASSWD");
-            keymap = graphics->vector_value("KEYMAP");
+            type=default_graphics_type;
+        }
 
-            one_util::tolower(type);
+        if ( listen.empty() )
+        {
+            get_default("GRAPHICS", "LISTEN", listen);
+        }
 
-            if ( type == "vnc" || type == "spice" )
+        if ( passwd.empty() )
+        {
+            get_default("GRAPHICS", "PASSWD", passwd);
+        }
+
+        if ( keymap.empty() )
+        {
+            get_default("GRAPHICS", "KEYMAP", keymap);
+        }
+
+        one_util::tolower(type);
+
+        if ( type == "vnc" || type == "spice" )
+        {
+            file << "\t\t<graphics type='" << type << "'";
+
+            if ( !listen.empty() )
             {
-                file << "\t\t<graphics type='" << type << "'";
+                file << " listen='" << listen << "'";
+            }
 
-                if ( !listen.empty() )
+            if ( !port.empty() )
+            {
+                file << " port='" << port << "'";
+            }
+
+            if ( !passwd.empty() )
+            {
+                file << " passwd='" << passwd << "'";
+            }
+
+            if ( !keymap.empty() )
+            {
+                file << " keymap='" << keymap << "'";
+            }
+
+            file << "/>" << endl;
+
+            if ( type == "spice" )
+            {
+                get_default("SPICE_OPTIONS", spice_options);
+
+                if ( spice_options != "" )
                 {
-                    file << " listen='" << listen << "'";
-                }
-
-                if ( !port.empty() )
-                {
-                    file << " port='" << port << "'";
-                }
-
-                if ( !passwd.empty() )
-                {
-                    file << " passwd='" << passwd << "'";
-                }
-
-                if ( !keymap.empty() )
-                {
-                    file << " keymap='" << keymap << "'";
-                }
-
-                file << "/>" << endl;
-
-                if ( type == "spice" )
-                {
-                    get_default("SPICE_OPTIONS", spice_options);
-
-                    if ( spice_options != "" )
-                    {
-                        file << "\t\t" << spice_options << endl;
-                    }
+                    file << "\t\t" << spice_options << endl;
                 }
             }
-            else
-            {
-                vm->log("VMM", Log::WARNING,
-                        "Graphics not supported or undefined, ignored.");
-            }
+        }
+        else
+        {
+            vm->log("VMM", Log::WARNING,
+                    "Graphics not supported or undefined, ignored.");
         }
     }
 
